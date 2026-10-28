@@ -69,9 +69,111 @@ The default API URL is `https://mineru.net/api/v4`. Advanced users may override 
 
 `MINERU_API_KEY` and `MINERU_TOKEN` remain supported as environment-variable aliases for advanced/manual deployments.
 
-## Upload authorization
+## Complete Windows + Claude Desktop example
 
-The client must set `confirm_upload` to the literal boolean `true` for each individual PDF. Without it, the server does not resolve, read, hash, or upload the path. The server accepts absolute local PDF paths only; URLs, UNC paths, relative paths, non-PDF files, and files without a PDF header are rejected.
+Assume the user installs the project at `C:\Users\Alice\Desktop\mineru-local`.
+
+### 1. Clone and run the installer
+
+Open PowerShell:
+
+```powershell
+git clone https://github.com/hongyi652/mineru-local.git C:\Users\Alice\Desktop\mineru-local
+cd C:\Users\Alice\Desktop\mineru-local
+py -3 install.py
+```
+
+The installer creates `.venv`, installs the dependencies, and generates `mcp-config.generated.json` with the correct absolute paths for that computer.
+
+### 2. Fill in only the Token
+
+The generated file will look like this:
+
+```json
+{
+  "mcpServers": {
+    "mineru-local": {
+      "command": "C:\\Users\\Alice\\Desktop\\mineru-local\\.venv\\Scripts\\python.exe",
+      "args": [
+        "C:\\Users\\Alice\\Desktop\\mineru-local\\server.py"
+      ],
+      "env": {
+        "MINERU_API_TOKEN": ""
+      }
+    }
+  }
+}
+```
+
+The user only fills in this value:
+
+```json
+"MINERU_API_TOKEN": "YOUR_REAL_MINERU_TOKEN"
+```
+
+The user does **not** manually configure `command`, `args`, or `MINERU_LOCAL_JOB_DIR`. The generated configuration file is ignored by Git; do not commit it after entering a real Token.
+
+### 3. Add it to Claude Desktop
+
+Open the Claude Desktop configuration file:
+
+```text
+%APPDATA%\Claude\claude_desktop_config.json
+```
+
+Copy the generated `mcpServers.mineru-local` entry into the existing `mcpServers` object, then restart Claude Desktop. If there are no other MCP servers, the generated JSON can be copied as the complete file.
+
+### 4. Convert a PDF
+
+Assume the input PDF is:
+
+```text
+C:\Users\Alice\Documents\papers\hydrogen-study.pdf
+```
+
+Ask Claude:
+
+> Please check whether MinerU Local MCP is available, then convert `C:\Users\Alice\Documents\papers\hydrogen-study.pdf` to Markdown. I authorize uploading this specific PDF to MinerU Cloud.
+
+After the authorization is clear, the MCP call uses parameters equivalent to:
+
+```json
+{
+  "input_path": "C:\\Users\\Alice\\Documents\\papers\\hydrogen-study.pdf",
+  "confirm_upload": true,
+  "is_ocr": false,
+  "page_ranges": "",
+  "enable_formula": true,
+  "enable_table": true,
+  "timeout_seconds": 600
+}
+```
+
+`confirm_upload: true` is a per-PDF upload authorization. It belongs to the tool call, not the MCP configuration file.
+
+### 5. Find the result
+
+On Windows, without any job-directory configuration, results are stored under:
+
+```text
+C:\Users\Alice\AppData\Local\mineru-local\jobs\<job_id>\
+```
+
+A successful job normally contains:
+
+```text
+document.md
+document_files\
+document_files\image_manifest.json
+status.json
+```
+
+The MCP status response returns the exact `markdown_path` and asset directory. The PDF is uploaded to MinerU Cloud and may consume API quota; do not upload confidential documents unless permitted.
+
+For VS Code, run `py -3 install.py --client vscode`; the installer generates `mcp-config.vscode.generated.json` using the VS Code MCP format.
+
+
+## Upload authorization
 
 A typical call sequence is:
 
