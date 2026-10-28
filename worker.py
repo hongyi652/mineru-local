@@ -13,7 +13,7 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
-from config import ENV_KEYS, load_settings
+from config import ENV_KEYS, default_config_path, load_settings
 
 
 def now() -> str:
@@ -40,9 +40,10 @@ def read_json(path: Path) -> dict:
 
 def source_paths() -> tuple[Path, Path]:
     root = Path(__file__).resolve().parent
-    configured = os.environ.get('MINERU_LOCAL_ENV_FILE', '').strip()
-    env_file = Path(configured).expanduser().resolve() if configured else Path()
-    return root, env_file
+    configured = (os.environ.get('MINERU_LOCAL_CONFIG_FILE') or
+                  os.environ.get('MINERU_LOCAL_ENV_FILE') or '').strip()
+    config_file = Path(configured).expanduser().resolve() if configured else default_config_path()
+    return root, config_file
 
 
 def load_backend(root: Path):
@@ -51,9 +52,9 @@ def load_backend(root: Path):
     return mineru_backend
 
 
-def api_settings(backend, env_file: Path) -> tuple[str, str]:
+def api_settings(backend, config_file: Path) -> tuple[str, str]:
     del backend
-    settings = load_settings(env_file if env_file and env_file.is_file() else None)
+    settings = load_settings(config_file)
     return settings.token, settings.base_url
 
 
@@ -144,9 +145,9 @@ def run_job(job_dir: Path, backend=None) -> int:
     timer.start()
     remote_started = False
     try:
-        root, env_file = source_paths()
+        root, config_file = source_paths()
         backend = backend or load_backend(root)
-        token, base_url = api_settings(backend, env_file)
+        token, base_url = api_settings(backend, config_file)
         if not token:
             status['error'] = {'code': 'missing_credentials', 'message': '未配置MinerU API token，未上传文件。'}
             raise RuntimeError('missing_credentials')
@@ -181,14 +182,14 @@ def run_job(job_dir: Path, backend=None) -> int:
 
 def health_report() -> dict:
     dependencies = {name: importlib.util.find_spec(name) is not None for name in ('requests', 'PIL')}
-    root, env_file = source_paths()
+    root, config_file = source_paths()
     report = {'ready': False, 'dependencies': dependencies,
               'backend_available': (root / 'mineru_backend.py').is_file(),
-              'credentials_file_configured': bool(os.environ.get('MINERU_LOCAL_ENV_FILE')),
+              'credentials_file_configured': bool(os.environ.get('MINERU_LOCAL_CONFIG_FILE') or os.environ.get('MINERU_LOCAL_ENV_FILE')),
               'cloud_processing': True}
     try:
         backend = load_backend(root)
-        token, _ = api_settings(backend, env_file)
+        token, _ = api_settings(backend, config_file)
         report.update(credentials_available=bool(token), ready=all(dependencies.values()) and bool(token))
     except Exception:
         report['error'] = {'code': 'configuration_unavailable',

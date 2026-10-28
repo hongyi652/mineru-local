@@ -19,6 +19,7 @@ from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+import install
 import server
 import worker
 
@@ -99,6 +100,19 @@ def bundle():
         archive.writestr('result/full.md', '# Offline paper\n\n$x^2$\n\n|a|b|\n|-|-|\n|1|2|\n\n![图](images/fig.png)\n')
         archive.writestr('result/images/fig.png', image.getvalue())
     return output.getvalue()
+
+
+def test_generated_config_contains_only_token(tmp_path):
+    config = install.build_config(Path('/tmp/python'), 'claude', '')
+    server_config = config['mcpServers']['mineru-local']
+    assert server_config['command'] == str(Path('/tmp/python').resolve())
+    assert server_config['args'] == [str((ROOT / 'server.py').resolve())]
+    assert server_config['env'] == {'MINERU_API_TOKEN': ''}
+    assert 'MINERU_LOCAL_JOB_DIR' not in json.dumps(config)
+
+
+def test_default_config_path_is_not_project_local():
+    assert install.ROOT not in worker.default_config_path().parents
 
 
 def test_requires_authorization_before_reading(monkeypatch):

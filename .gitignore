@@ -12,8 +12,9 @@ build/
 *.egg-info/
 *.pyc
 *.zip
-*.mineru.zip
+*.generated.json
 .venv/
+
 venv/
 .env
 .env.*

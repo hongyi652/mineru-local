@@ -1,11 +1,10 @@
 {
   "mcpServers": {
     "mineru-local": {
-      "command": "<ABSOLUTE_PATH>/.venv/bin/python",
-      "args": ["<ABSOLUTE_PATH>/server.py"],
+      "command": "<AUTO_GENERATED_BY_install.py>",
+      "args": ["<AUTO_GENERATED_BY_install.py/server.py>"],
       "env": {
-        "MINERU_API_TOKEN": "SET_IN_USER_SECRET_STORE",
-        "MINERU_LOCAL_JOB_DIR": "<PRIVATE_JOB_DIRECTORY>"
+        "MINERU_API_TOKEN": "在这里填写你的 MinerU API Token"
       }
     }
   }

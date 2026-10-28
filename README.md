@@ -19,57 +19,55 @@ A standalone MCP server for converting explicitly authorized local PDF files to 
 - A MinerU API token
 - Network access to MinerU Cloud
 
-Install dependencies in a virtual environment:
+## One-command setup
+
+The recommended setup is to let the installer generate the machine-specific MCP configuration. Clone the repository, then run:
 
 ```bash
-python -m venv .venv
-# Windows PowerShell
-.venv\Scripts\Activate.ps1
+# Windows
+py -3 install.py
+
 # macOS/Linux
-source .venv/bin/activate
-python -m pip install -r requirements.txt
+python3 install.py
 ```
 
-## Credentials and configuration
+The installer automatically:
 
-Set a token in the process environment. The recommended variable is:
+1. creates `.venv`;
+2. installs `requirements.txt`;
+3. detects the virtual-environment Python path;
+4. detects the absolute `server.py` path;
+5. generates `mcp-config.generated.json` for Claude Desktop.
 
-```text
-MINERU_API_TOKEN=your-token
-```
-
-`MINERU_API_KEY` and `MINERU_TOKEN` are accepted as aliases. The default API URL is `https://mineru.net/api/v4`; optionally set `MINERU_API_BASE_URL` or `MINERU_BASE_URL` to an HTTPS URL without credentials, query strings, or fragments.
-
-For a user-managed environment file, set `MINERU_LOCAL_ENV_FILE` to its absolute path. The server does not scan the current directory, parent directories, or unrelated projects for `.env` files.
-
-Set `MINERU_LOCAL_JOB_DIR` (or the legacy-compatible `MINERU_LOCAL_JOBS_DIR`) to choose where private job metadata and outputs are stored. If unset, the default is:
-
-- Windows: `%LOCALAPPDATA%\\mineru-local\\jobs`
-- macOS: `~/Library/Application Support/mineru-local/jobs`
-- Linux: `$XDG_DATA_HOME/mineru-local/jobs`, or `~/.local/share/mineru-local/jobs`
-
-Keep this directory private. It contains local source paths, status metadata, Markdown, and extracted images.
-
-## MCP client configuration
-
-Use the Python executable from the virtual environment and the absolute path to `server.py`. Replace placeholders locally; never commit a real token or private path.
+Open the generated file and fill in only:
 
 ```json
-{
-  "mcpServers": {
-    "mineru-local": {
-      "command": "<ABSOLUTE_PATH>/.venv/bin/python",
-      "args": ["<ABSOLUTE_PATH>/server.py"],
-      "env": {
-        "MINERU_API_TOKEN": "SET_IN_USER_SECRET_STORE",
-        "MINERU_LOCAL_JOB_DIR": "<PRIVATE_JOB_DIRECTORY>"
-      }
-    }
-  }
-}
+"MINERU_API_TOKEN": "在这里填写你的 MinerU API Token"
 ```
 
-On Windows, use the equivalent `\\.venv\\Scripts\\python.exe` path. The server uses stdio transport and should be launched by the MCP client, not by a public web server.
+Then copy the generated JSON into the MCP client's configuration and restart the client. The generated file is ignored by Git so a token cannot be committed accidentally. To generate a VS Code configuration instead:
+
+```bash
+py -3 install.py --client vscode
+```
+
+The generated VS Code file is `mcp-config.vscode.generated.json`. The installer preserves an existing token when regenerating the same output file.
+
+The installer writes no `MINERU_LOCAL_JOB_DIR`: the server automatically uses the platform's private application-data directory for jobs.
+
+## Credentials and automatic configuration
+
+The generated MCP configuration contains only one value that the user must fill in:
+
+```json
+"MINERU_API_TOKEN": "在这里填写你的 MinerU API Token"
+```
+
+`install.py` automatically writes the virtual-environment Python path and the absolute `server.py` path. The server automatically chooses a private platform data directory for jobs, so users do not need to configure `MINERU_LOCAL_JOB_DIR`.
+
+The default API URL is `https://mineru.net/api/v4`. Advanced users may override it with `MINERU_API_BASE_URL` or `MINERU_BASE_URL`, but the generated configuration does not include either variable.
+
+`MINERU_API_KEY` and `MINERU_TOKEN` remain supported as environment-variable aliases for advanced/manual deployments.
 
 ## Upload authorization
 
